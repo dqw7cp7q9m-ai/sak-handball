@@ -1,0 +1,96 @@
+{\rtf1\ansi\ansicpg932\cocoartf2821
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 import streamlit as st\
+import pandas as pd\
+import sqlite3\
+import plotly.express as px\
+\
+# ===== \uc0\u12487 \u12540 \u12479 \u12505 \u12540 \u12473 \u21021 \u26399 \u21270  =====\
+conn = sqlite3.connect('handball.db')\
+c = conn.cursor()\
+\
+c.execute('''\
+CREATE TABLE IF NOT EXISTS matches (\
+    id INTEGER PRIMARY KEY AUTOINCREMENT,\
+    date TEXT,\
+    opponent TEXT,\
+    result TEXT,\
+    our_score INTEGER,\
+    opp_score INTEGER\
+)\
+''')\
+\
+c.execute('''\
+CREATE TABLE IF NOT EXISTS player_stats (\
+    id INTEGER PRIMARY KEY AUTOINCREMENT,\
+    match_id INTEGER,\
+    player_name TEXT,\
+    goals INTEGER,\
+    shots INTEGER,\
+    assists INTEGER,\
+    turnovers INTEGER,\
+    FOREIGN KEY (match_id) REFERENCES matches (id)\
+)\
+''')\
+conn.commit()\
+\
+# ===== \uc0\u12450 \u12503 \u12522 UI =====\
+st.title("\uc0\u55358 \u56638 \u8205 \u9794 \u65039  \u12495 \u12531 \u12489 \u12508 \u12540 \u12523 \u12487 \u12540 \u12479 \u20998 \u26512 \u12469 \u12452 \u12488 ")\
+\
+menu = st.sidebar.radio("\uc0\u12513 \u12491 \u12517 \u12540 \u12434 \u36984 \u25246 ", ["\u35430 \u21512 \u30331 \u37682 ", "\u36984 \u25163 \u12487 \u12540 \u12479 \u20837 \u21147 ", "\u25104 \u32318 \u20998 \u26512 "])\
+\
+# ===== \uc0\u35430 \u21512 \u30331 \u37682  =====\
+if menu == "\uc0\u35430 \u21512 \u30331 \u37682 ":\
+    st.header("\uc0\u55357 \u56517  \u35430 \u21512 \u24773 \u22577 \u12398 \u30331 \u37682 ")\
+\
+    with st.form("add_match"):\
+        date = st.date_input("\uc0\u35430 \u21512 \u26085 ")\
+        opponent = st.text_input("\uc0\u23550 \u25126 \u30456 \u25163 ")\
+        result = st.selectbox("\uc0\u32080 \u26524 ", ["Win", "Lose", "Draw"])\
+        our_score = st.number_input("\uc0\u33258 \u12481 \u12540 \u12512 \u24471 \u28857 ", 0)\
+        opp_score = st.number_input("\uc0\u30456 \u25163 \u12481 \u12540 \u12512 \u24471 \u28857 ", 0)\
+        submitted = st.form_submit_button("\uc0\u30331 \u37682 ")\
+\
+        if submitted:\
+            c.execute(\
+                "INSERT INTO matches (date, opponent, result, our_score, opp_score) VALUES (?, ?, ?, ?, ?)",\
+                (date, opponent, result, our_score, opp_score)\
+            )\
+            conn.commit()\
+            st.success(f"\{opponent\} \uc0\u25126 \u12434 \u30331 \u37682 \u12375 \u12414 \u12375 \u12383 \u65281 ")\
+\
+    st.subheader("\uc0\u55357 \u56522  \u30331 \u37682 \u28168 \u12415 \u35430 \u21512 \u19968 \u35239 ")\
+    matches = pd.read_sql("SELECT * FROM matches", conn)\
+    st.dataframe(matches)\
+\
+# ===== \uc0\u36984 \u25163 \u12487 \u12540 \u12479 \u20837 \u21147  =====\
+elif menu == "\uc0\u36984 \u25163 \u12487 \u12540 \u12479 \u20837 \u21147 ":\
+    st.header("\uc0\u55358 \u56781 \u8205 \u9794 \u65039  \u36984 \u25163 \u12487 \u12540 \u12479 \u20837 \u21147 ")\
+\
+    matches = pd.read_sql("SELECT * FROM matches", conn)\
+    if len(matches) == 0:\
+        st.warning("\uc0\u20808 \u12395 \u35430 \u21512 \u12434 \u30331 \u37682 \u12375 \u12390 \u12367 \u12384 \u12373 \u12356 \u12290 ")\
+    else:\
+        match_id = st.selectbox("\uc0\u23550 \u35937 \u35430 \u21512 \u12434 \u36984 \u25246 ", matches["id"])\
+        match_info = matches[matches["id"] == match_id].iloc[0]\
+        st.write(f"\uc0\u23550 \u25126 \u30456 \u25163 \u65306 \{match_info['opponent']\}\u65288 \{match_info['date']\}\u65289 ")\
+\
+        with st.form("add_player_stats"):\
+            player_name = st.text_input("\uc0\u36984 \u25163 \u21517 ")\
+            goals = st.number_input("\uc0\u24471 \u28857 \u25968 ", 0)\
+            shots = st.number_input("\uc0\u12471 \u12517 \u12540 \u12488 \u25968 ", 0)\
+            assists = st.number_input("\uc0\u12450 \u12471 \u12473 \u12488 \u25968 ", 0)\
+            turnovers = st.number_input("\uc0\u12479 \u12540 \u12531 \u12458 \u12540 \u12496 \u12540 \u25968 ", 0)\
+            submitted = st.form_submit_button("\uc0\u30331 \u37682 ")\
+\
+            if submitted:\
+                c.execute('''\
+                    INSERT INTO player_stats (match_id, player_name, goals, shots, assists, turnovers)\
+                    VALUES (?, ?, ?, ?, ?, ?)\
+                ''', (match_id, p_\
+}
